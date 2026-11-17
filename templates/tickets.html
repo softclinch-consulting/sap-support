@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ticket_table, module_options %}
+{% block title %}Tickets{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Tickets</h1><p class="muted">{{ rows|length }} matching</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('tickets_csv', **args.to_dict()) }}">Export CSV</a>
+    <a class="btn primary" href="{{ url_for('ticket_new') }}">Raise a ticket</a>
+  </div>
+</div>
+<section class="panel">
+  <form class="filters" method="get">
+    <div class="field" style="flex:1 1 220px"><label for="q">Search</label>
+      <input id="q" type="search" name="q" value="{{ args.q }}" placeholder="Number, title, T-code, error text, transport"></div>
+    <div class="field"><label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="open" {{ 'selected' if args.get('status', 'open') == 'open' }}>All open</option>
+        <option value="all" {{ 'selected' if args.status == 'all' }}>All</option>
+        {% for s in STATUSES %}<option {{ 'selected' if args.status == s }}>{{ s }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="priority">Priority</label>
+      <select id="priority" name="priority"><option value="">Any</option>
+        {% for p in PRIORITIES %}<option value="{{ p }}" {{ 'selected' if args.priority == p }}>{{ p }} · {{ PRIORITY_LABELS[p] }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="module">Module</label><select id="module" name="module">{{ module_options(args.module) }}</select></div>
+    <div class="field"><label for="category">Category</label>
+      <select id="category" name="category"><option value="">Any</option>
+        {% for c in CATEGORIES %}<option {{ 'selected' if args.category == c }}>{{ c }}</option>{% endfor %}
+      </select></div>
+    {% if is_staff() %}
+    <div class="field"><label for="company">Client</label>
+      <select id="company" name="company"><option value="">Any client</option>
+        {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if args.company == c.id|string }}>{{ c.name }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="assignee">Assignee</label>
+      <select id="assignee" name="assignee"><option value="">Anyone</option>
+        <option value="me" {{ 'selected' if args.assignee == 'me' }}>Me</option>
+        <option value="none" {{ 'selected' if args.assignee == 'none' }}>Unassigned</option>
+        {% for s in staff %}<option value="{{ s.id }}" {{ 'selected' if args.assignee == s.id|string }}>{{ s.name }}</option>{% endfor %}
+      </select></div>
+    {% endif %}
+    <div class="field"><label for="sla">Resolution SLA</label>
+      <select id="sla" name="sla"><option value="">Any</option>
+        {% for v, l in [('breached','Breached'),('at_risk','At risk'),('on_track','On track'),('paused','Paused'),('met','Met')] %}
+        <option value="{{ v }}" {{ 'selected' if args.sla == v }}>{{ l }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="sort">Sort by</label>
+      <select id="sort" name="sort">
+        {% for v, l in [('due','Due soonest'),('priority','Priority'),('updated','Last updated'),('created','Newest')] %}
+        <option value="{{ v }}" {{ 'selected' if args.get('sort', 'due') == v }}>{{ l }}</option>{% endfor %}
+      </select></div>
+    <div class="actions"><button class="btn primary" type="submit">Apply</button><a class="btn" href="{{ url_for('tickets') }}">Reset</a></div>
+  </form>
+  {{ ticket_table(rows, show_company=is_staff(), empty="No tickets match these filters.") }}
+</section>
+{% endblock %}

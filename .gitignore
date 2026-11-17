@@ -1,0 +1,7 @@
+.secret_key
+helpdesk.db
+helpdesk.db-*
+__pycache__/
+*.py[cod]
+uploads/
+.venv/

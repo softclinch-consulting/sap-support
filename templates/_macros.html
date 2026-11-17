@@ -1,0 +1,40 @@
+{% macro prio(p) -%}
+<span class="chip {{ p }}" title="{{ PRIORITY_HELP[p] }}">{{ p }} · {{ PRIORITY_LABELS[p] }}</span>
+{%- endmacro %}
+
+{% macro status(s) -%}
+<span class="chip st-{{ s|replace(' ', '-') }}">{{ s }}</span>
+{%- endmacro %}
+
+{% macro sla(i) -%}
+<span class="chip sla-{{ i.resolution }}" title="Resolution due {{ i.resolution_due|dt }}">{{ i.text }}</span>
+{%- endmacro %}
+
+{% macro ticket_table(rows, show_company=True, empty="No tickets here.") -%}
+{% if rows %}
+<div class="table-wrap"><table>
+  <thead><tr><th>Ticket</th><th>Issue</th>{% if show_company %}<th>Client</th>{% endif %}<th>Priority</th><th>Status</th><th>Assignee</th><th>Resolution SLA</th></tr></thead>
+  <tbody>
+  {% for t, i in rows %}
+    <tr class="stripe-{{ t.priority }}">
+      <td><a class="mono" href="{{ url_for('ticket_detail', tid=t.id) }}">{{ t.number }}</a></td>
+      <td class="t-title"><a href="{{ url_for('ticket_detail', tid=t.id) }}">{{ t.title }}</a>
+        <div class="sub"><span class="tag">{{ t.module }}</span>{% if t.tcode %} <span class="tag">{{ t.tcode }}</span>{% endif %} · updated {{ t.updated_at|ago }}</div></td>
+      {% if show_company %}<td>{{ t.company_name }}</td>{% endif %}
+      <td>{{ prio(t.priority) }}</td>
+      <td>{{ status(t.status) }}</td>
+      <td>{{ t.assignee_name or '—' }}</td>
+      <td>{{ sla(i) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="empty">{{ empty }}</div>
+{% endif %}
+{%- endmacro %}
+
+{% macro module_options(selected, blank='Any module') -%}
+<option value="">{{ blank }}</option>
+{% for code, name in MODULES %}<option value="{{ code }}" {{ 'selected' if selected == code }}>{{ code }} · {{ name }}</option>{% endfor %}
+{%- endmacro %}

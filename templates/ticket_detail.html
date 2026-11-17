@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% from "_macros.html" import prio, status, module_options %}
+{% block title %}{{ t.number }}{% endblock %}
+{% block content %}
+{% set client_view = g.user.role == 'client' %}
+<div class="page-head">
+  <div class="t-head">
+    <span class="muted small"><a href="{{ url_for('tickets') }}">Tickets</a> / <span class="mono">{{ t.number }}</span></span>
+    <h1>{{ t.title }}</h1>
+    <div class="meta">{{ prio(t.priority) }} {{ status(t.status) }} <span class="tag">{{ t.module }}</span>
+      <span class="muted small">{{ t.category }} · {{ t.company_name }} · raised by {{ t.reporter_name or '—' }} on {{ t.created_at|dt }}</span>
+      {% if t.reopen_count %}<span class="chip sla-at_risk">Reopened {{ t.reopen_count }}×</span>{% endif %}</div>
+  </div>
+  {% if is_staff() and t.status in ('Resolved', 'Closed') %}
+  <a class="btn" href="{{ url_for('kb_new', from_ticket=t.id) }}">Save as KB article</a>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="stack">
+    <section class="panel">
+      <header><h2>Issue</h2></header>
+      <div class="body stack" style="gap:14px">
+        <p class="prose">{{ t.description }}</p>
+        {% if t.error_message %}<div><div class="label" style="margin-bottom:4px">Error message</div><div class="errbox">{{ t.error_message }}</div></div>{% endif %}
+        {% if t.business_impact %}<div><div class="label">Business impact</div><p class="prose">{{ t.business_impact }}</p></div>{% endif %}
+        <dl class="kv">
+          <dt>System / client</dt><dd>{{ t.sap_system or '—' }}{% if t.sap_client %} / {{ t.sap_client }}{% endif %}</dd>
+          <dt>Transaction</dt><dd>{% if t.tcode %}<span class="tag">{{ t.tcode }}</span>{% else %}—{% endif %}</dd>
+          <dt>Users affected</dt><dd>{{ t.users_affected or '—' }}</dd>
+          <dt>Transport</dt><dd>{% if t.transport_request %}<span class="tag">{{ t.transport_request }}</span>{% else %}—{% endif %}</dd>
+          <dt>SAP Note</dt><dd>{{ t.sap_note or '—' }}</dd>
+        </dl>
+        {% if loose %}<div><div class="label" style="margin-bottom:4px">Attachments</div><div class="files">
+          {% for a in loose %}<a href="{{ url_for('attachment', aid=a.id) }}">{{ a.filename }} <span class="muted">{{ a.size|filesize }}</span></a>{% endfor %}</div></div>{% endif %}
+      </div>
+    </section>
+
+    {% if t.resolution or t.root_cause %}
+    <section class="panel">
+      <header><h2>Resolution</h2>{% if t.resolved_at %}<span class="muted small">Resolved {{ t.resolved_at|dt }}</span>{% endif %}</header>
+      <div class="body stack" style="gap:10px">
+        {% if t.root_cause %}<div><div class="label">Root cause</div><p class="prose">{{ t.root_cause }}</p></div>{% endif %}
+        {% if t.resolution %}<div><div class="label">Fix applied</div><p class="prose">{{ t.resolution }}</p></div>{% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="panel">
+      <header><h2>Conversation</h2><span class="muted small">{{ comments|length }} message{{ '' if comments|length == 1 else 's' }}</span></header>
+      <div class="timeline">
+        {% for c in comments %}
+        <article class="msg {{ 'internal' if c.internal else ('client' if c.author_role == 'client') }}">
+          <div class="who"><strong>{{ c.author or 'Former user' }}</strong>
+            <span class="muted small">{{ 'Client' if c.author_role == 'client' else 'AMS team' }} · {{ c.created_at|dt }}</span>
+            {% if c.internal %}<span class="chip sla-at_risk">Internal note</span>{% endif %}</div>
+          <p class="prose">{{ c.body }}</p>
+          {% if by_comment.get(c.id) %}<div class="files">{% for a in by_comment[c.id] %}<a href="{{ url_for('attachment', aid=a.id) }}">{{ a.filename }} <span class="muted">{{ a.size|filesize }}</span></a>{% endfor %}</div>{% endif %}
+        </article>
+        {% else %}
+        <div class="empty">No messages yet.</div>
+        {% endfor %}
+      </div>
+      {% if t.status != 'Closed' or is_staff() %}
+      <form id="reply" class="body stack" style="gap:10px;border-top:1px solid var(--line)" method="post" action="{{ url_for('ticket_comment', tid=t.id) }}" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field"><label for="body">{{ 'Reply or add a note' if is_staff() else 'Reply to the support team' }}</label>
+          <textarea id="body" name="body" placeholder="{{ 'Visible to the client unless you tick Internal note.' if is_staff() else 'Add details, answer a question, or attach a screenshot.' }}"></textarea></div>
+        <div class="actions">
+          <input id="cfiles" name="files" type="file" multiple style="max-width:260px">
+          {% if is_staff() %}
+          <label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" name="internal" value="1"> Internal note (hidden from client)</label>
+          <select name="then_status" aria-label="Then set status" style="width:auto">
+            <option value="">Keep status</option>
+            {% for s in ['In Progress', 'Awaiting Customer', 'Awaiting SAP', 'In Testing'] %}{% if s != t.status %}<option value="{{ s }}">Then set: {{ s }}</option>{% endif %}{% endfor %}
+          </select>
+          {% endif %}
+          <button class="btn primary" type="submit">Post</button>
+        </div>
+      </form>
+      {% endif %}
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="panel">
+      <header><h2>SLA</h2><span class="muted small">{{ t.priority }} · {{ PRIORITY_LABELS[t.priority] }}</span></header>
+      <div class="body sla-box">
+        <div class="sla-row"><span>First response</span>
+          <span class="chip resp-{{ sla.response }}">{{ {'met':'Met','breached':'Breached','pending':'Due ' ~ (sla.response_due|dt('%d %b, %H:%M'))}[sla.response] }}</span></div>
+        <div class="sla-row"><span>Resolution</span><span class="chip sla-{{ sla.resolution }}">{{ sla.text }}</span></div>
+        <div class="muted small">Resolution due {{ sla.resolution_due|dt }}.
+          {% if t.paused_at %}Clock paused while {{ t.status|lower }}.{% elif t.paused_seconds %}Includes {{ (t.paused_seconds / 3600)|round(1) }} h paused waiting on customer or SAP.{% endif %}</div>
+      </div>
+    </section>
+
+    {% if is_staff() %}
+    <form class="panel" method="post" action="{{ url_for('ticket_update', tid=t.id) }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <header><h2>Work this ticket</h2></header>
+      <div class="body form-grid" style="grid-template-columns:1fr 1fr">
+        <div class="field"><label for="u_status">Status</label>
+          <select id="u_status" name="status">{% for s in STATUSES %}<option {{ 'selected' if t.status == s }}>{{ s }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="u_priority">Priority</label>
+          <select id="u_priority" name="priority">{% for p in PRIORITIES %}<option value="{{ p }}" {{ 'selected' if t.priority == p }}>{{ p }} · {{ PRIORITY_LABELS[p] }}</option>{% endfor %}</select></div>
+        <div class="field wide"><label for="u_assignee">Assignee</label>
+          <select id="u_assignee" name="assignee_id"><option value="">Unassigned</option>
+            {% for s in staff %}<option value="{{ s.id }}" {{ 'selected' if t.assignee_id == s.id }}>{{ s.name }}{% if s.modules %} ({{ s.modules|replace(',', ', ') }}){% endif %}</option>{% endfor %}</select></div>
+        <div class="field"><label for="u_module">Module</label><select id="u_module" name="module">{{ module_options(t.module, 'Choose…') }}</select></div>
+        <div class="field"><label for="u_category">Category</label>
+          <select id="u_category" name="category">{% for c in CATEGORIES %}<option {{ 'selected' if t.category == c }}>{{ c }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="u_tcode">Transaction</label><input id="u_tcode" name="tcode" type="text" value="{{ t.tcode or '' }}"></div>
+        <div class="field"><label for="u_tr">Transport request</label><input id="u_tr" name="transport_request" type="text" value="{{ t.transport_request or '' }}" placeholder="e.g. DEVK900123"></div>
+        <div class="field wide"><label for="u_note">SAP Note / SAP case</label><input id="u_note" name="sap_note" type="text" value="{{ t.sap_note or '' }}" placeholder="Note number or SAP for Me case ID"></div>
+        <div class="field wide"><label for="u_rc">Root cause</label><textarea id="u_rc" name="root_cause" style="min-height:60px">{{ t.root_cause or '' }}</textarea></div>
+        <div class="field wide"><label for="u_res">Resolution</label><textarea id="u_res" name="resolution" style="min-height:80px" placeholder="Required before Resolved. The client sees this.">{{ t.resolution or '' }}</textarea></div>
+        <div class="wide"><button class="btn primary" type="submit">Save changes</button></div>
+      </div>
+    </form>
+    {% endif %}
+
+    {% if t.status == 'Resolved' %}
+    <section class="panel"><header><h2>{{ 'Is it fixed?' if client_view else 'Client confirmation' }}</h2></header>
+      <div class="body stack" style="gap:10px">
+        <form method="post" action="{{ url_for('ticket_accept', tid=t.id) }}" class="stack" style="gap:8px">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn primary" type="submit">Yes, close the ticket</button>
+        </form>
+        <form method="post" action="{{ url_for('ticket_reopen', tid=t.id) }}" class="stack" style="gap:8px">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <div class="field"><label for="reopen_body">Not fixed? Tell us what you still see</label><textarea id="reopen_body" name="body" style="min-height:60px" required></textarea></div>
+          <button class="btn" type="submit">Reopen ticket</button>
+        </form>
+      </div>
+    </section>
+    {% elif t.status == 'Closed' %}
+    <section class="panel"><header><h2>Issue came back?</h2></header>
+      <form class="body stack" style="gap:8px" method="post" action="{{ url_for('ticket_reopen', tid=t.id) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field"><label for="reopen_body2">What are you seeing now?</label><textarea id="reopen_body2" name="body" style="min-height:60px" required></textarea></div>
+        <button class="btn" type="submit">Reopen ticket</button>
+      </form>
+    </section>
+    {% endif %}
+
+    <section class="panel">
+      <header><h2>Related knowledge</h2><a class="small" href="{{ url_for('kb_list', module=t.module) }}">All {{ t.module }} articles</a></header>
+      <div class="body" style="padding-top:4px;padding-bottom:4px">
+        {% for k in kb %}
+        <div class="kb-hit"><a href="{{ url_for('kb_view', kid=k.id) }}">{{ k.title }}</a>
+          <span class="muted small">{{ k.module }}{% if k.tcode %} · {{ k.tcode }}{% endif %}{% if k.visibility == 'internal' %} · internal{% endif %}</span></div>
+        {% else %}<div class="muted small" style="padding:8px 0">No matching articles yet.</div>{% endfor %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <header><h2>History</h2></header>
+      <div class="body"><ul class="history">
+        {% for h in history %}
+        <li><span>{% if h.field == 'created' %}Ticket created as <strong>{{ h.new_value }}</strong>{% else %}<strong>{{ h.field|capitalize }}</strong>: {{ h.old_value or '—' }} → {{ h.new_value or '—' }}{% endif %}</span>
+          <span class="muted">{{ h.who or 'System' }} · {{ h.created_at|dt }}</span></li>
+        {% endfor %}
+      </ul></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

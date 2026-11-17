@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% macro pct(v) -%}{% if v is none %}<span class="muted">—</span>{% else %}<span class="chip {{ 'sla-met' if v >= 90 else ('sla-at_risk' if v >= 75 else 'sla-breached') }}">{{ v }}%</span>{% endif %}{%- endmacro %}
+{% macro breakdown(title, rows, label) -%}
+<section class="panel"><header><h2>{{ title }}</h2></header>
+  {% if rows %}<div class="table-wrap"><table>
+    <thead><tr><th>{{ label }}</th><th class="num">Tickets</th><th class="num">Open</th><th class="num">Resolved</th><th>Response SLA</th><th>Resolution SLA</th><th class="num">Avg hours to resolve</th><th class="num">Open & breached</th><th class="num">Reopened</th></tr></thead>
+    <tbody>{% for r in rows %}<tr>
+      <td>{{ r.key }}{% if label == 'Priority' %} · {{ PRIORITY_LABELS.get(r.key, '') }}{% endif %}</td>
+      <td class="num">{{ r.total }}</td><td class="num">{{ r.open }}</td><td class="num">{{ r.resolved }}</td>
+      <td>{{ pct(r.resp_pct) }}</td><td>{{ pct(r.res_pct) }}</td>
+      <td class="num">{{ r.avg_hours if r.avg_hours is not none else '—' }}</td>
+      <td class="num">{{ r.breached_open }}</td><td class="num">{{ r.reopened }}</td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}<div class="empty">No tickets in this period.</div>{% endif %}
+</section>
+{%- endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Service reports</h1><p class="muted">Tickets raised between {{ d_from }} and {{ d_to }}. Hours to resolve exclude time paused waiting on the customer or SAP.</p></div>
+</div>
+<section class="panel">
+  <form class="filters" method="get" style="border-bottom:0">
+    <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="{{ d_from }}"></div>
+    <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="{{ d_to }}"></div>
+    <div class="field"><label for="company">Client</label>
+      <select id="company" name="company"><option value="">All clients</option>
+        {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if args.company == c.id|string }}>{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="actions"><button class="btn primary" type="submit">Update</button></div>
+  </form>
+</section>
+{% if overall %}
+<div class="tiles">
+  <div class="tile info"><div class="n">{{ overall.total }}</div><div class="l">Tickets raised</div></div>
+  <div class="tile ok"><div class="n">{{ overall.resolved }}</div><div class="l">Resolved</div></div>
+  <div class="tile"><div class="n">{{ overall.resp_pct if overall.resp_pct is not none else '—' }}{% if overall.resp_pct is not none %}%{% endif %}</div><div class="l">Response SLA met</div></div>
+  <div class="tile {{ 'crit' if overall.res_pct is not none and overall.res_pct < 75 else 'ok' }}"><div class="n">{{ overall.res_pct if overall.res_pct is not none else '—' }}{% if overall.res_pct is not none %}%{% endif %}</div><div class="l">Resolution SLA met</div></div>
+  <div class="tile"><div class="n">{{ overall.avg_hours if overall.avg_hours is not none else '—' }}</div><div class="l">Avg hours to resolve</div></div>
+  <div class="tile crit"><div class="n">{{ overall.breached_open }}</div><div class="l">Open and breached</div></div>
+</div>
+{% endif %}
+{{ breakdown('By priority', by_priority, 'Priority') }}
+{{ breakdown('By SAP module', by_module, 'Module') }}
+{{ breakdown('By client', by_company, 'Client') }}
+{{ breakdown('By consultant', by_consultant, 'Consultant') }}
+{{ breakdown('By category', by_category, 'Category') }}
+{% endblock %}

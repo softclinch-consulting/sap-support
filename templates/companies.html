@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Client companies{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Client companies</h1><p class="muted">Each AMS client. Client users only see their own company's tickets.</p></div>
+  <a class="btn primary" href="{{ url_for('admin_company_form') }}">Add company</a>
+</div>
+<section class="panel"><div class="table-wrap"><table>
+  <thead><tr><th>Company</th><th>SAP release</th><th>Contact</th><th class="num">Users</th><th class="num">Open tickets</th><th>Status</th><th></th></tr></thead>
+  <tbody>{% for c in companies %}<tr>
+    <td>{{ c.name }}</td><td>{{ c.sap_release or '—' }}</td>
+    <td>{{ c.contact_name or '—' }}{% if c.contact_email %}<div class="small muted">{{ c.contact_email }}</div>{% endif %}</td>
+    <td class="num">{{ c.users }}</td><td class="num"><a href="{{ url_for('tickets', company=c.id) }}">{{ c.open }}</a></td>
+    <td>{% if c.active %}<span class="chip sla-met">Active</span>{% else %}<span class="chip">Inactive</span>{% endif %}</td>
+    <td><a class="btn sm" href="{{ url_for('admin_company_form', cid=c.id) }}">Edit</a></td>
+  </tr>{% else %}<tr><td colspan="7" class="empty">No companies yet. Add your first AMS client.</td></tr>{% endfor %}</tbody>
+</table></div></section>
+{% endblock %}

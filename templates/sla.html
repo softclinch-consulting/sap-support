@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}SLA policy{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>SLA policy</h1>
+  <p class="muted">Hours run on the 24×7 clock. The resolution clock pauses while a ticket is Awaiting Customer or Awaiting SAP.</p></div></div>
+<form class="panel" method="post" style="max-width:760px">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Priority</th><th>When to use</th><th>First response (hours)</th><th>Resolution (hours)</th></tr></thead>
+    <tbody>{% for p in PRIORITIES %}<tr>
+      <td><strong>{{ p }}</strong> · {{ PRIORITY_LABELS[p] }}</td>
+      <td class="small muted">{{ PRIORITY_HELP[p] }}</td>
+      <td><input type="number" step="0.25" min="0.25" name="resp_{{ p }}" value="{{ sla[p].response_hours }}" aria-label="{{ p }} response hours" style="max-width:110px"></td>
+      <td><input type="number" step="0.5" min="0.5" name="res_{{ p }}" value="{{ sla[p].resolution_hours }}" aria-label="{{ p }} resolution hours" style="max-width:110px"></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="body"><button class="btn primary" type="submit">Save policy</button></div>
+</form>
+{% endblock %}

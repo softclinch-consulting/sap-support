@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% set ep = request.endpoint or '' %}
+{% if g.user %}
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">{{ app_name }}<small>SAP application support</small></div>
+    <nav>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if ep == 'dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('tickets') }}" class="{{ 'active' if ep in ('tickets', 'ticket_detail') }}">Tickets</a>
+      <a href="{{ url_for('ticket_new') }}" class="{{ 'active' if ep == 'ticket_new' }}">Raise a ticket</a>
+      <a href="{{ url_for('kb_list') }}" class="{{ 'active' if ep.startswith('kb_') }}">Knowledge base</a>
+      {% if is_staff() %}<a href="{{ url_for('reports') }}" class="{{ 'active' if ep == 'reports' }}">Reports</a>{% endif %}
+      {% if is_admin() %}
+        <div class="group">Administration</div>
+        <a href="{{ url_for('admin_users') }}" class="{{ 'active' if ep.startswith('admin_user') }}">Users</a>
+        <a href="{{ url_for('admin_companies') }}" class="{{ 'active' if ep.startswith('admin_compan') }}">Client companies</a>
+        <a href="{{ url_for('admin_sla') }}" class="{{ 'active' if ep == 'admin_sla' }}">SLA policy</a>
+      {% endif %}
+    </nav>
+    <div class="me">
+      <strong>{{ g.user.name }}</strong>
+      <span>{{ g.user.role|capitalize }}{% if g.user.company_name %} · {{ g.user.company_name }}{% endif %}</span>
+      <a href="{{ url_for('profile') }}" style="color:#9cc6f2">Change password</a>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="linkbtn" type="submit">Sign out</button>
+      </form>
+    </div>
+  </aside>
+  <main class="main">
+    {% include "_flashes.html" %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+<main class="auth">
+  {% block auth %}{% endblock %}
+</main>
+{% endif %}
+</body>
+</html>

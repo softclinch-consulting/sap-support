@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit company' if c else 'Add company' }}{% endblock %}
+{% block content %}
+{% set f = request.form if request.method == 'POST' else {} %}
+<div class="page-head"><h1>{{ 'Edit ' ~ c.name if c else 'Add client company' }}</h1></div>
+<form class="panel" method="post" style="max-width:760px">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="body form-grid">
+    <div class="field wide"><label for="name">Company name</label><input id="name" name="name" type="text" required value="{{ f.name or (c.name if c else '') }}"></div>
+    <div class="field"><label for="sap_release">SAP release</label><input id="sap_release" name="sap_release" type="text" value="{{ f.sap_release or (c.sap_release if c and c.sap_release else '') }}" placeholder="e.g. S/4HANA 2023, ECC 6.0 EHP8"></div>
+    <div class="field"><label for="contact_name">Key contact</label><input id="contact_name" name="contact_name" type="text" value="{{ f.contact_name or (c.contact_name if c and c.contact_name else '') }}"></div>
+    <div class="field"><label for="contact_email">Contact email</label><input id="contact_email" name="contact_email" type="email" value="{{ f.contact_email or (c.contact_email if c and c.contact_email else '') }}"></div>
+    <div class="field"><span class="label">Status</span>
+      <label class="small" style="display:inline-flex;gap:6px;align-items:center;font-weight:400;color:var(--ink)"><input type="checkbox" name="active" value="1" {{ 'checked' if (not c or c.active) }}> Active AMS client</label></div>
+    <div class="field wide"><label for="notes">Landscape notes</label><textarea id="notes" name="notes" placeholder="System IDs, clients, contract scope, escalation contacts">{{ f.notes or (c.notes if c and c.notes else '') }}</textarea></div>
+    <div class="wide actions"><button class="btn primary" type="submit">Save company</button><a class="btn" href="{{ url_for('admin_companies') }}">Cancel</a></div>
+  </div>
+</form>
+{% endblock %}

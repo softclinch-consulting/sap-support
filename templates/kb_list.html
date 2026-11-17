@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import module_options %}
+{% block title %}Knowledge base{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Knowledge base</h1><p class="muted">Known SAP errors and how to fix them. Search before you raise a ticket.</p></div>
+  {% if is_staff() %}<a class="btn primary" href="{{ url_for('kb_new') }}">New article</a>{% endif %}
+</div>
+<section class="panel">
+  <form class="filters" method="get">
+    <div class="field" style="flex:1 1 260px"><label for="q">Search</label><input id="q" type="search" name="q" value="{{ args.q }}" placeholder="Error number, T-code or keyword, e.g. M7 021, F110"></div>
+    <div class="field"><label for="module">Module</label><select id="module" name="module">{{ module_options(args.module) }}</select></div>
+    <div class="actions"><button class="btn primary" type="submit">Search</button><a class="btn" href="{{ url_for('kb_list') }}">Reset</a></div>
+  </form>
+  {% if articles %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Article</th><th>Module</th><th>Transaction</th><th class="num">Views</th><th>Updated</th></tr></thead>
+    <tbody>
+    {% for k in articles %}
+      <tr><td class="t-title"><a href="{{ url_for('kb_view', kid=k.id) }}">{{ k.title }}</a>
+        <div class="sub">{{ k.symptoms|truncate(120) }}{% if k.visibility == 'internal' %} · <strong>Internal</strong>{% endif %}</div></td>
+        <td><span class="tag">{{ k.module }}</span></td><td>{% if k.tcode %}<span class="tag">{{ k.tcode }}</span>{% endif %}</td>
+        <td class="num">{{ k.views }}</td><td class="small muted">{{ k.updated_at|dt('%d %b %Y') }}</td></tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}<div class="empty">No articles found.{% if is_staff() %} Resolved tickets can be turned into articles from the ticket page.{% endif %}</div>{% endif %}
+</section>
+{% endblock %}

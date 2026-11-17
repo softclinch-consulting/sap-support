@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}First-time setup{% endblock %}
+{% block auth %}
+<form class="card" method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div><h1>Create the admin account</h1><p class="muted small" style="margin:4px 0 0">This page is available only until the first account exists.</p></div>
+  {% include "_flashes.html" %}
+  <div class="field"><label for="name">Your name</label><input id="name" name="name" type="text" required value="{{ request.form.name }}"></div>
+  <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required value="{{ request.form.email }}"></div>
+  <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" minlength="8" required><span class="hint">At least 8 characters.</span></div>
+  <button class="btn primary" type="submit">Create admin and continue</button>
+</form>
+{% endblock %}

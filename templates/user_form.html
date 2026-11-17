@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit user' if u else 'Add user' }}{% endblock %}
+{% block content %}
+{% set f = request.form if request.method == 'POST' else {} %}
+<div class="page-head"><h1>{{ 'Edit ' ~ u.name if u else 'Add user' }}</h1></div>
+<form class="panel" method="post" style="max-width:760px">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="body form-grid">
+    <div class="field"><label for="name">Name</label><input id="name" name="name" type="text" required value="{{ f.name or (u.name if u else '') }}"></div>
+    <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required value="{{ f.email or (u.email if u else '') }}"></div>
+    <div class="field"><label for="role">Role</label>
+      {% set role = f.role or (u.role if u else 'client') %}
+      <select id="role" name="role">{% for r in ROLES %}<option value="{{ r }}" {{ 'selected' if role == r }}>{{ r|capitalize }}</option>{% endfor %}</select>
+      <span class="hint">Client: own company's tickets. Consultant: all tickets. Admin: plus settings.</span></div>
+    <div class="field"><label for="company_id">Client company</label>
+      {% set comp = (f.company_id or (u.company_id if u else ''))|string %}
+      <select id="company_id" name="company_id"><option value="">None (AMS team)</option>
+        {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if comp == c.id|string }}>{{ c.name }}</option>{% endfor %}</select>
+      <span class="hint">Required for client users.</span></div>
+    <div class="field"><label for="password">{{ 'Reset password' if u else 'Password' }}</label>
+      <input id="password" name="password" type="password" minlength="8" {{ '' if u else 'required' }} placeholder="{{ 'Leave blank to keep current' if u else 'At least 8 characters' }}"></div>
+    <div class="field"><span class="label">Account</span>
+      <label class="small" style="display:inline-flex;gap:6px;align-items:center;font-weight:400;color:var(--ink)">
+        <input type="checkbox" name="active" value="1" {{ 'checked' if (not u or u.active) }}> Active (can sign in)</label></div>
+    <fieldset class="wide"><legend>SAP modules (consultants)</legend>
+      <div class="checks">{% for code, name in MODULES %}
+        <label><input type="checkbox" name="modules" value="{{ code }}" {{ 'checked' if code in user_modules or code in request.form.getlist('modules') }}> {{ code }}</label>{% endfor %}</div>
+    </fieldset>
+    <div class="wide actions"><button class="btn primary" type="submit">Save user</button><a class="btn" href="{{ url_for('admin_users') }}">Cancel</a></div>
+  </div>
+</form>
+{% endblock %}

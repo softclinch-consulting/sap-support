@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ k.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="t-head">
+    <span class="muted small"><a href="{{ url_for('kb_list') }}">Knowledge base</a> / {{ k.module }}</span>
+    <h1>{{ k.title }}</h1>
+    <div class="meta"><span class="tag">{{ k.module }}</span>{% if k.tcode %}<span class="tag">{{ k.tcode }}</span>{% endif %}
+      {% if k.visibility == 'internal' %}<span class="chip sla-at_risk">Internal only</span>{% endif %}
+      <span class="muted small">By {{ k.author or '—' }} · updated {{ k.updated_at|dt('%d %b %Y') }} · {{ k.views }} views
+      {% if k.source_number and is_staff() %} · from <a href="{{ url_for('ticket_detail', tid=k.source_ticket_id) }}">{{ k.source_number }}</a>{% endif %}</span></div>
+  </div>
+  {% if is_staff() %}<div class="actions">
+    <a class="btn" href="{{ url_for('kb_edit', kid=k.id) }}">Edit</a>
+    {% if is_admin() %}<form method="post" action="{{ url_for('kb_delete', kid=k.id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn danger" type="submit">Delete</button></form>{% endif %}
+  </div>{% endif %}
+</div>
+<div class="grid-even" style="grid-template-columns:1fr">
+  <section class="panel"><header><h2>Symptoms</h2></header><div class="body"><p class="prose">{{ k.symptoms }}</p></div></section>
+  <section class="panel"><header><h2>Solution</h2></header><div class="body"><p class="prose">{{ k.solution }}</p></div></section>
+  {% if k.tags %}<div class="actions">{% for tag in k.tags.split(',') %}<a class="tag" href="{{ url_for('kb_list', q=tag.strip()) }}">{{ tag.strip() }}</a>{% endfor %}</div>{% endif %}
+</div>
+<div class="panel"><div class="body actions"><span>Didn't solve it?</span><a class="btn primary" href="{{ url_for('ticket_new') }}">Raise a ticket</a></div></div>
+{% endblock %}

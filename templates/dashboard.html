@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ticket_table, prio, status, sla %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Good to see you, {{ g.user.name.split()[0] }}</h1>
+    <p class="muted">{% if g.user.role == 'client' %}Support tickets for {{ g.user.company_name }}{% else %}All client tickets across the AMS desk{% endif %}</p>
+  </div>
+  <a class="btn primary" href="{{ url_for('ticket_new') }}">Raise a ticket</a>
+</div>
+
+<div class="tiles">
+  <a class="tile info" href="{{ url_for('tickets', status='open') }}"><div class="n">{{ tiles.open }}</div><div class="l">Open tickets</div></a>
+  <a class="tile warn" href="{{ url_for('tickets', status='open', sort='priority') }}"><div class="n">{{ tiles.critical }}</div><div class="l">Open P1 / P2</div></a>
+  <a class="tile crit" href="{{ url_for('tickets', status='open', sla='breached') }}"><div class="n">{{ tiles.breached }}</div><div class="l">Resolution SLA breached</div></a>
+  <a class="tile" href="{{ url_for('tickets', status='Awaiting Customer') }}"><div class="n">{{ tiles.waiting }}</div><div class="l">Awaiting customer</div></a>
+  <a class="tile ok" href="{{ url_for('tickets', status='Resolved') }}"><div class="n">{{ tiles.resolved_week }}</div><div class="l">Resolved in last 7 days</div></a>
+</div>
+
+<div class="grid-2">
+  <div class="stack">
+    <section class="panel">
+      <header><h2>Needs attention</h2><span class="muted small">Breached, at risk or not yet picked up</span></header>
+      {{ ticket_table(attention, show_company=g.user.role != 'client', empty="Nothing urgent. Every open ticket is on track.") }}
+    </section>
+    <section class="panel">
+      <header><h2>{% if g.user.role == 'client' %}Tickets I raised{% else %}My queue{% endif %}</h2>
+        {% if g.user.role != 'client' %}<a class="small" href="{{ url_for('tickets', assignee='me') }}">View all</a>{% endif %}</header>
+      {{ ticket_table(mine, show_company=g.user.role != 'client', empty="No open tickets assigned to you.") }}
+    </section>
+  </div>
+  <div class="stack">
+    <section class="panel">
+      <header><h2>Open by SAP module</h2></header>
+      <div class="body">
+        {% if by_module %}<div class="bars">
+          {% for m, c in by_module %}
+          <a class="bar" href="{{ url_for('tickets', status='open', module=m) }}" style="color:inherit">
+            <span>{{ m }}</span><span class="track"><span class="fill" style="width:{{ (100 * c / max_module)|round(0) }}%; display:block"></span></span><span class="v">{{ c }}</span>
+          </a>
+          {% endfor %}
+        </div>{% else %}<div class="muted">No open tickets.</div>{% endif %}
+      </div>
+    </section>
+    <section class="panel">
+      <header><h2>Open by status and priority</h2></header>
+      <div class="body stack" style="gap:12px">
+        <div class="actions">{% for s, c in by_status %}<a href="{{ url_for('tickets', status=s) }}">{{ status(s) }} <span class="num">{{ c }}</span></a>{% else %}<span class="muted">—</span>{% endfor %}</div>
+        <div class="actions">{% for p, c in by_priority %}<a href="{{ url_for('tickets', status='open', priority=p) }}">{{ prio(p) }} <span class="num">{{ c }}</span></a>{% endfor %}</div>
+      </div>
+    </section>
+    <section class="panel">
+      <header><h2>Recent activity</h2></header>
+      <div class="body" style="padding-top:4px;padding-bottom:4px">
+        {% for t, i in recent %}
+        <div class="kb-hit">
+          <a href="{{ url_for('ticket_detail', tid=t.id) }}"><span class="mono">{{ t.number }}</span> {{ t.title }}</a>
+          <span class="muted small">{{ t.status }} · {{ t.company_name }} · {{ t.updated_at|ago }}</span>
+        </div>
+        {% else %}<div class="muted">No tickets yet.</div>{% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

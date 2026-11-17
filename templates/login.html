@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block auth %}
+<form class="card" method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div><h1>{{ app_name }}</h1><p class="muted small" style="margin:4px 0 0">Sign in to raise and track SAP support tickets.</p></div>
+  {% include "_flashes.html" %}
+  <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required autofocus value="{{ request.form.email }}"></div>
+  <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" required></div>
+  <button class="btn primary" type="submit">Sign in</button>
+</form>
+{% endblock %}

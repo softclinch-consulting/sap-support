@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import module_options %}
+{% block title %}{{ 'Edit article' if k.id else 'New article' }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ 'Edit article' if k.id else 'New knowledge article' }}</h1></div>
+<form class="panel" method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  {% if source %}<input type="hidden" name="source_ticket_id" value="{{ source }}">{% endif %}
+  <div class="body form-grid">
+    <div class="field wide"><label for="title">Title</label><input id="title" name="title" type="text" required value="{{ k.title or '' }}" placeholder="Name the symptom or error, e.g. Deficit of stock (M7 021) on goods movement"></div>
+    <div class="field"><label for="module">Module</label><select id="module" name="module" required>{{ module_options(k.module, 'Choose…') }}</select></div>
+    <div class="field"><label for="tcode">Transaction</label><input id="tcode" name="tcode" type="text" value="{{ k.tcode or '' }}"></div>
+    <div class="field"><label for="visibility">Visible to</label>
+      <select id="visibility" name="visibility">
+        <option value="public" {{ 'selected' if k.visibility != 'internal' }}>Clients and AMS team</option>
+        <option value="internal" {{ 'selected' if k.visibility == 'internal' }}>AMS team only</option>
+      </select></div>
+    <div class="field wide"><label for="symptoms">Symptoms</label><textarea id="symptoms" name="symptoms" required>{{ k.symptoms or '' }}</textarea></div>
+    <div class="field wide"><label for="solution">Solution</label><textarea id="solution" name="solution" required style="min-height:180px">{{ k.solution or '' }}</textarea>
+      <span class="hint">Write numbered steps. Remove client-specific data (user IDs, document numbers) before publishing to clients.</span></div>
+    <div class="field wide"><label for="tags">Tags</label><input id="tags" name="tags" type="text" value="{{ k.tags or '' }}" placeholder="Comma separated, e.g. month end, posting period"></div>
+    <div class="wide actions"><button class="btn primary" type="submit">{{ 'Save' if k.id else 'Publish' }}</button>
+      <a class="btn" href="{{ url_for('kb_view', kid=k.id) if k.id else url_for('kb_list') }}">Cancel</a></div>
+  </div>
+</form>
+{% endblock %}

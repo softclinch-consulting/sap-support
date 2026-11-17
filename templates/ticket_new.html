@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import module_options %}
+{% block title %}Raise a ticket{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Raise a ticket</h1>
+  <p class="muted">The more SAP detail you give (T-code, exact error message, system and client), the faster a consultant can start.</p></div></div>
+
+<form class="stack" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <section class="panel"><header><h2>What's the issue?</h2></header>
+    <div class="body form-grid">
+      {% if is_staff() %}
+      <div class="field"><label for="company_id">Client company</label>
+        <select id="company_id" name="company_id" required><option value="">Choose…</option>
+          {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if form.company_id == c.id|string }}>{{ c.name }}</option>{% endfor %}
+        </select></div>
+      {% endif %}
+      <div class="field wide"><label for="title">Short summary</label>
+        <input id="title" name="title" type="text" maxlength="200" required value="{{ form.title }}" placeholder="e.g. MIGO goods receipt fails for PO 4500012345"></div>
+      <div class="field"><label for="module">SAP module</label>
+        <select id="module" name="module" required>{{ module_options(form.module, 'Choose…') }}</select></div>
+      <div class="field"><label for="category">Category</label>
+        <select id="category" name="category" required>
+          {% for c in CATEGORIES %}<option {{ 'selected' if (form.category or 'Incident') == c }}>{{ c }}</option>{% endfor %}
+        </select></div>
+      <div class="field wide"><label for="description">Description</label>
+        <textarea id="description" name="description" required placeholder="What were you doing, what did you expect, and what happened instead? Include document numbers (PO, sales order, invoice) where relevant.">{{ form.description }}</textarea></div>
+    </div>
+  </section>
+
+  <section class="panel"><header><h2>SAP details</h2><span class="muted small">Optional, but saves a round-trip</span></header>
+    <div class="body form-grid">
+      <div class="field"><label for="sap_system">System</label>
+        <select id="sap_system" name="sap_system"><option value="">Not sure</option>
+          {% for s in SAP_SYSTEMS %}<option {{ 'selected' if (form.sap_system or 'PRD') == s }}>{{ s }}</option>{% endfor %}
+        </select></div>
+      <div class="field"><label for="sap_client">Client no.</label><input id="sap_client" name="sap_client" type="text" maxlength="3" value="{{ form.sap_client }}" placeholder="e.g. 300"></div>
+      <div class="field"><label for="tcode">Transaction / app</label><input id="tcode" name="tcode" type="text" maxlength="40" value="{{ form.tcode }}" placeholder="e.g. VA01, F110, ME21N"></div>
+      <div class="field"><label for="users_affected">Users affected</label><input id="users_affected" name="users_affected" type="text" value="{{ form.users_affected }}" placeholder="e.g. All AP clerks (6)"></div>
+      <div class="field wide"><label for="error_message">Error message</label>
+        <input id="error_message" name="error_message" type="text" value="{{ form.error_message }}" placeholder="Copy the exact text and message number, e.g. M7 021 Deficit of SL Unrestricted-use…">
+        <span class="hint">Double-click the message in the SAP status bar to see its number and long text.</span></div>
+      <div class="field wide"><label for="files">Screenshots or logs</label><input id="files" name="files" type="file" multiple>
+        <span class="hint">PNG, JPG, PDF, TXT, XLSX, DOCX, ZIP and similar. Up to 20 MB in total.</span></div>
+    </div>
+  </section>
+
+  <section class="panel"><header><h2>Priority and impact</h2></header>
+    <div class="body stack" style="gap:14px">
+      <div class="prio-pick">
+        {% for p in PRIORITIES %}
+        <label><span><input type="radio" name="priority" value="{{ p }}" required {{ 'checked' if (form.priority or 'P3') == p }}><strong>{{ p }} · {{ PRIORITY_LABELS[p] }}</strong></span>
+          <span class="muted small">{{ PRIORITY_HELP[p] }}</span>
+          <span class="small">Response {{ sla[p].response_hours|hrs }} · Resolution {{ sla[p].resolution_hours|hrs }}</span></label>
+        {% endfor %}
+      </div>
+      <div class="field"><label for="business_impact">Business impact</label>
+        <textarea id="business_impact" name="business_impact" style="min-height:70px" placeholder="Required for P1. e.g. Month-end close blocked; dispatch stopped at plant 1000.">{{ form.business_impact }}</textarea></div>
+      {% if is_staff() %}
+      <div class="field" style="max-width:320px"><label for="assignee_id">Assign to</label>
+        <select id="assignee_id" name="assignee_id"><option value="">Auto-assign by module</option>
+          {% for s in staff %}<option value="{{ s.id }}" {{ 'selected' if form.assignee_id == s.id|string }}>{{ s.name }}{% if s.modules %} ({{ s.modules|replace(',', ', ') }}){% endif %}</option>{% endfor %}
+        </select></div>
+      {% endif %}
+    </div>
+  </section>
+  <div class="actions"><button class="btn primary" type="submit">Submit ticket</button><a class="btn" href="{{ url_for('tickets') }}">Cancel</a></div>
+</form>
+{% endblock %}

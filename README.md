@@ -4,6 +4,14 @@ A self-hosted help desk for SAP Application Management Services. Clients raise S
 issues, consultants work them against SLAs, and resolved tickets become knowledge
 base articles.
 
+## Deploy on Render
+
+In the Render dashboard, create a Blueprint from this repository and review the
+service before deploying. The Blueprint uses a paid Starter web service and a
+persistent disk so tickets and attachments survive restarts. After deployment,
+visit `/setup` on the service URL to create the first admin account. Demo data is
+not loaded in production.
+
 ## Quick start
 
 ```bash
